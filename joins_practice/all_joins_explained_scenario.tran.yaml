@@ -1,0 +1,248 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  metadata:
+    origin: "METL"
+  components:
+    REST_CUSTOMERS:
+      type: "table-input"
+      parameters:
+        componentName: "REST_CUSTOMERS"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        targetTable: "CUSTOMERS"
+        columnNames:
+        - "CUSTOMER_ID"
+        - "CUSTOMER_NAME"
+        - "JOIN_DATE"
+        - "LOYALTY_LEVEL"
+        - "AGE"
+        - "CITY"
+        timeOffset: ""
+    REST_ORDERS:
+      type: "table-input"
+      parameters:
+        componentName: "REST_ORDERS"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        targetTable: "ORDERS"
+        columnNames:
+        - "ORDER_ID"
+        - "ORDER_DATE"
+        - "CUSTOMER_ID"
+        - "EMPLOYEE_ID"
+        - "MENU_ID"
+        - "QUANTITY"
+        timeOffset: ""
+    REST_MENUS:
+      type: "table-input"
+      parameters:
+        componentName: "REST_MENUS"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        targetTable: "MENU"
+        columnNames:
+        - "MENU_ID"
+        - "ITEM_NAME"
+        - "CATEGORY"
+        - "PRICE"
+        timeOffset: ""
+    REST_EMPLOYEES:
+      type: "table-input"
+      parameters:
+        componentName: "REST_EMPLOYEES"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        targetTable: "EMPLOYEES"
+        columnNames:
+        - "EMPLOYEE_ID"
+        - "EMPLOYEE_NAME"
+        - "HIRE_DATE"
+        - "POSITION"
+        timeOffset: ""
+    Join Orders, Customers, Menu & Employees:
+      type: "join"
+      sources:
+      - "REST_CUSTOMERS"
+      - "REST_MENUS"
+      - "REST_ORDERS"
+      - "REST_EMPLOYEES"
+      parameters:
+        componentName: "Join Orders, Customers, Menu & Employees"
+        mainTable: "REST_CUSTOMERS"
+        mainTableAlias: "c"
+        joins:
+        - - "REST_ORDERS"
+          - "o"
+          - "Left"
+        - - "REST_MENUS"
+          - "m"
+          - "Left"
+        - - "REST_EMPLOYEES"
+          - "e"
+          - "Left"
+        joinExpressions:
+        - - "\"c\".\"CUSTOMER_ID\"=\"o\".\"CUSTOMER_ID\""
+          - "c_Left_o"
+        - - "\"o\".\"MENU_ID\"=\"m\".\"MENU_ID\""
+          - "c_Left_m"
+        - - "\"o\".\"EMPLOYEE_ID\"=\"e\".\"EMPLOYEE_ID\""
+          - "c_Left_e"
+        columnMappings:
+        - - "c.CUSTOMER_ID"
+          - "CUSTOMER_ID"
+        - - "c.CUSTOMER_NAME"
+          - "CUSTOMER_NAME"
+        - - "c.LOYALTY_LEVEL"
+          - "LOYALTY_LEVEL"
+        - - "c.AGE"
+          - "AGE"
+        - - "c.CITY"
+          - "CITY"
+        - - "o.ORDER_ID"
+          - "ORDER_ID"
+        - - "o.ORDER_DATE"
+          - "ORDER_DATE"
+        - - "m.MENU_ID"
+          - "MENU_ID"
+        - - "m.ITEM_NAME"
+          - "ITEM_NAME"
+        - - "m.CATEGORY"
+          - "CATEGORY"
+        - - "o.QUANTITY"
+          - "QUANTITY"
+        - - "m.PRICE"
+          - "PRICE"
+        - - "e.EMPLOYEE_ID"
+          - "EMPLOYEE_ID"
+        - - "e.EMPLOYEE_NAME"
+          - "EMPLOYEE_NAME"
+        - - "e.POSITION"
+          - "POSITION"
+    Calculating Revenue:
+      type: "calculator"
+      sources:
+      - "Join Orders, Customers, Menu & Employees"
+      parameters:
+        componentName: "Calculating Revenue"
+        includeInputColumns: "Yes"
+        calculations:
+        - - "\"QUANTITY\" * \"PRICE\""
+          - "REVENUE"
+        - - "YEAR(\"ORDER_DATE\")"
+          - "ORDER_YR"
+        - - "MONTH(\"ORDER_DATE\")"
+          - "ORDER_MNTH"
+    Aggregate Loyalty Program Orders Count:
+      type: "aggregate"
+      sources:
+      - "Calculating Revenue"
+      parameters:
+        componentName: "Aggregate Loyalty Program Orders Count"
+        groupings:
+        - "ORDER_YR"
+        - "ORDER_MNTH"
+        aggregations:
+        - - "ORDER_ID"
+          - "Count"
+        - - "REVENUE"
+          - "Average"
+        - - "PRICE"
+          - "Sum"
+        - - "CUSTOMER_ID"
+          - "Count Distinct"
+        - - "QUANTITY"
+          - "Sum"
+        groupingType: "Group By"
+    CUSTOMER IJ OME:
+      type: "rewrite-table"
+      sources:
+      - "Join Orders, Customers, Menu & Employees"
+      parameters:
+        componentName: "CUSTOMER IJ OME"
+        warehouse: "[Environment Default]"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        targetTable: "REST_CUST_ORDER_DETAILS_IJ"
+        orderBy:
+    Rank:
+      type: "rank"
+      sources:
+      - "Aggregate Loyalty Program Orders Count"
+      parameters:
+        componentName: "Rank"
+        includeInputColumns: "Yes"
+        partitionData:
+        - "ORDER_YR"
+        - "ORDER_MNTH"
+        orderingWithinPartitions:
+        - - "sum_QUANTITY"
+          - "Descending"
+        functions:
+        - - "Dense Rank"
+          - "TOP_N_CUST_QTY"
+    Filter:
+      type: "filter"
+      sources:
+      - "Rank"
+      parameters:
+        componentName: "Filter"
+        mode: "Basic"
+        filterConditions:
+        - - "TOP_N_CUST_QTY"
+          - "Is"
+          - "Less than or equal to"
+          - "${TOP_N_VALUE}"
+        combineCondition: "And"
+design:
+  components:
+    REST_CUSTOMERS:
+      position:
+        x: 768
+        "y": -32
+      tempMetlId: 38623
+    REST_ORDERS:
+      position:
+        x: 768
+        "y": 48
+      tempMetlId: 38644
+    REST_MENUS:
+      position:
+        x: 768
+        "y": 128
+      tempMetlId: 38646
+    REST_EMPLOYEES:
+      position:
+        x: 768
+        "y": 192
+      tempMetlId: 38648
+    Join Orders, Customers, Menu & Employees:
+      position:
+        x: 960
+        "y": 96
+      tempMetlId: 38745
+    Calculating Revenue:
+      position:
+        x: 1104
+        "y": 96
+      tempMetlId: 77841
+    Aggregate Loyalty Program Orders Count:
+      position:
+        x: 1264
+        "y": 96
+      tempMetlId: 77819
+    CUSTOMER IJ OME:
+      position:
+        x: 1080
+        "y": 320
+      tempMetlId: 77965
+    Rank:
+      position:
+        x: 1410
+        "y": 100
+      tempMetlId:
+    Filter:
+      position:
+        x: 1590
+        "y": 100
+      tempMetlId:
