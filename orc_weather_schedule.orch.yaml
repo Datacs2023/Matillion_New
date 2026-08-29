@@ -1,0 +1,59 @@
+type: "orchestration"
+version: "1.0"
+pipeline:
+  components:
+    Start:
+      type: "start"
+      transitions:
+        unconditional:
+        - "Alter Warehouse"
+      parameters:
+        componentName: "Start"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+    Alter Warehouse:
+      type: "alter-warehouse"
+      transitions:
+        success:
+        - "Run Transformation"
+      parameters:
+        componentName: "Alter Warehouse"
+        warehouse: "DEMO_WAREHOUSE"
+        commandType: "Set"
+        properties:
+        - - "WAREHOUSE_SIZE"
+          - "XLARGE"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+    Run Transformation:
+      type: "run-transformation"
+      parameters:
+        componentName: "Run Transformation"
+        transformationJob: "trn_forecast_data.tran.yaml"
+        setScalarVariables:
+        setGridVariables:
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+design:
+  components:
+    Start:
+      position:
+        x: 0
+        "y": 0
+      tempMetlId:
+    Alter Warehouse:
+      position:
+        x: 160
+        "y": 0
+      tempMetlId:
+    Run Transformation:
+      position:
+        x: 320
+        "y": 0
+      tempMetlId:

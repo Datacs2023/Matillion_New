@@ -1,0 +1,62 @@
+type: "orchestration"
+version: "1.0"
+pipeline:
+  components:
+    Start:
+      type: "start"
+      transitions:
+        unconditional:
+        - "Open-Meteo Connector"
+      parameters:
+        componentName: "Start"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+    Open-Meteo Connector:
+      type: "modular-api-extract-input-v2"
+      parameters:
+        componentName: "Open-Meteo Connector"
+        componentId: "custom_v2-811f5daf-f11e-42f1-a4b5-ee4b3b0f9f2c"
+        inputId: "api-extract-input-v2"
+        api-extract-input-v2:
+          profile: "custom-811f5daf-f11e-42f1-a4b5-ee4b3b0f9f2c"
+          endpoint: "Forecast"
+          connectionRef:
+            overrides:
+              authType: "NONE"
+          uriParams:
+          queryParams:
+          headerParams:
+          postBody:
+          pageLimit:
+          logLevel: "ERROR"
+          loadSelectedData: "No"
+        outputId: "snowflake-output-connector-v0"
+        snowflake-output-connector-v0:
+          warehouse: "[Environment Default]"
+          database: "[Environment Default]"
+          schema: "[Environment Default]"
+          tableName: "Forecast_raw_data"
+          createTableMode: "FAIL_IF_EXISTS"
+          loadCsvByName: "No"
+          fullLoadColumnMapping:
+          cleanStagedFiles: "Yes"
+          stagePlatform: "SNOWFLAKE"
+          snowflake#internalStageType: "USER"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+design:
+  components:
+    Start:
+      position:
+        x: 0
+        "y": 0
+      tempMetlId:
+    Open-Meteo Connector:
+      position:
+        x: 160
+        "y": 0
+      tempMetlId:
