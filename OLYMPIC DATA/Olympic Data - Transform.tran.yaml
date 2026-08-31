@@ -1,0 +1,243 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  components:
+    olympic_athlets:
+      type: "table-input"
+      parameters:
+        componentName: "olympic_athlets"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        targetTable: "olympic_athletes"
+        columnNames:
+        - "ID"
+        - "Name"
+        - "Sex"
+        - "Age"
+        - "Height"
+        - "Weight"
+        - "Team"
+        - "NOC"
+        - "Games"
+        - "Year"
+        - "Season"
+        - "City"
+        - "Sport"
+        - "Event"
+        - "Medal"
+        timeOffset:
+    noc_region:
+      type: "table-input"
+      parameters:
+        componentName: "noc_region"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        targetTable: "noc_region"
+        columnNames:
+        - "NOC"
+        - "Region"
+        - "Notes"
+        timeOffset:
+    Correct Naming:
+      type: "calculator"
+      sources:
+      - "noc_region"
+      parameters:
+        componentName: "Correct Naming"
+        includeInputColumns: "No"
+        calculations:
+        - - "\"NOC\""
+          - "NOC"
+        - - "COALESCE(\"Notes\", \"Region\")"
+          - "Name"
+    Join:
+      type: "join"
+      sources:
+      - "olympic_athlets"
+      - "Correct Naming"
+      parameters:
+        componentName: "Join"
+        mainTable: "olympic_athlets"
+        mainTableAlias: "ath"
+        joins:
+        - - "Correct Naming"
+          - "noc"
+          - "Left"
+        joinExpressions:
+        - - "\"ath\".\"NOC\"=\"noc\".\"NOC\""
+          - "ath_Left_noc"
+        columnMappings:
+        - - "noc.NOC"
+          - "noc_NOC"
+        - - "noc.Name"
+          - "noc_Name"
+        - - "ath.ID"
+          - "ID"
+        - - "ath.Name"
+          - "ath_Name"
+        - - "ath.Sex"
+          - "Sex"
+        - - "ath.Age"
+          - "Age"
+        - - "ath.Height"
+          - "Height"
+        - - "ath.Weight"
+          - "Weight"
+        - - "ath.Team"
+          - "Team"
+        - - "ath.NOC"
+          - "ath_NOC"
+        - - "ath.Games"
+          - "Games"
+        - - "ath.Year"
+          - "Year"
+        - - "ath.Season"
+          - "Season"
+        - - "ath.City"
+          - "City"
+        - - "ath.Sport"
+          - "Sport"
+        - - "ath.Event"
+          - "Event"
+        - - "ath.Medal"
+          - "Medal"
+    Medal Winners 2016 Summer:
+      type: "filter"
+      sources:
+      - "Join"
+      parameters:
+        componentName: "Medal Winners 2016 Summer"
+        mode: "Basic"
+        filterConditions:
+        - - "Year"
+          - "Is"
+          - "Equal to"
+          - "2016"
+        - - "Season"
+          - "Is"
+          - "Equal to"
+          - "Summer"
+        - - "Medal"
+          - "Not"
+          - "Equal to"
+          - "NA"
+        combineCondition: "And"
+    Calculate Points:
+      type: "calculator"
+      sources:
+      - "Medal Winners 2016 Summer"
+      parameters:
+        componentName: "Calculate Points"
+        includeInputColumns: "Yes"
+        calculations:
+        - - "CASE\r\n  WHEN \"Medal\" = 'Gold' THEN 3\r\n  WHEN \"Medal\" = 'Silver'\
+            \ THEN 2\r\n  WHEN \"Medal\" = 'Bronze' THEN 1\r\n  ELSE 0\r\nEND"
+          - "POINTS"
+    Aggregate Points By Name:
+      type: "aggregate"
+      sources:
+      - "Calculate Points"
+      parameters:
+        componentName: "Aggregate Points By Name"
+        groupings:
+        - "ath_Name"
+        aggregations:
+        - - "POINTS"
+          - "Sum"
+        groupingType: "Group By"
+    Rank By Points:
+      type: "rank"
+      sources:
+      - "Aggregate Points By Name"
+      parameters:
+        componentName: "Rank By Points"
+        includeInputColumns: "Yes"
+        partitionData:
+        orderingWithinPartitions:
+        - - "sum_POINTS"
+          - "Descending"
+        functions:
+        - - "Row Number"
+          - "Rank"
+    Top 10 Athletes:
+      type: "filter"
+      sources:
+      - "Rank By Points"
+      parameters:
+        componentName: "Top 10 Athletes"
+        mode: "Basic"
+        filterConditions:
+        - - "Rank"
+          - "Is"
+          - "Less than or equal to"
+          - "10"
+        combineCondition: "And"
+    Write To Table:
+      type: "rewrite-table"
+      sources:
+      - "Top 10 Athletes"
+      parameters:
+        componentName: "Write To Table"
+        warehouse: "[Environment Default]"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        targetTable: "Top 10 Athletes Summer 2016"
+        orderBy:
+        - - "sum_POINTS"
+          - "DESCENDING"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+design:
+  components:
+    olympic_athlets:
+      position:
+        x: -440
+        "y": -110
+      tempMetlId:
+    noc_region:
+      position:
+        x: -450
+        "y": 120
+      tempMetlId:
+    Correct Naming:
+      position:
+        x: -270
+        "y": 120
+      tempMetlId:
+    Join:
+      position:
+        x: -160
+        "y": -20
+      tempMetlId:
+    Medal Winners 2016 Summer:
+      position:
+        x: 0
+        "y": -20
+      tempMetlId:
+    Calculate Points:
+      position:
+        x: 160
+        "y": -20
+      tempMetlId:
+    Aggregate Points By Name:
+      position:
+        x: 320
+        "y": -20
+      tempMetlId:
+    Rank By Points:
+      position:
+        x: 480
+        "y": -20
+      tempMetlId:
+    Top 10 Athletes:
+      position:
+        x: 640
+        "y": -20
+      tempMetlId:
+    Write To Table:
+      position:
+        x: 800
+        "y": -20
+      tempMetlId:

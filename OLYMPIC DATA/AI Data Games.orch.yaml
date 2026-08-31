@@ -1,0 +1,333 @@
+type: "orchestration"
+version: "1.0"
+pipeline:
+  components:
+    Start:
+      type: "start"
+      transitions:
+        unconditional:
+        - "Create Olympic Athletes"
+        - "Create Table NOC Region"
+      parameters:
+        componentName: "Start"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+    Create Olympic Athletes:
+      type: "create-table-v2"
+      transitions:
+        success:
+        - "S3 Load"
+      parameters:
+        componentName: "Create Olympic Athletes"
+        createMethod: "Replace"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        table: "olympic_athletes"
+        snowflakeTableType: "Permanent"
+        columns:
+        - - "ID"
+          - "VARCHAR"
+          - ""
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - ""
+          - ""
+        - - "Name"
+          - "VARCHAR"
+          - ""
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - ""
+          - ""
+        - - "Sex"
+          - "VARCHAR"
+          - ""
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - ""
+          - ""
+        - - "Age"
+          - "VARCHAR"
+          - ""
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - ""
+          - ""
+        - - "Height"
+          - "VARCHAR"
+          - ""
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - ""
+          - ""
+        - - "Weight"
+          - "VARCHAR"
+          - ""
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - ""
+          - ""
+        - - "Team"
+          - "VARCHAR"
+          - ""
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - ""
+          - ""
+        - - "NOC"
+          - "VARCHAR"
+          - ""
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - ""
+          - ""
+        - - "Games"
+          - "VARCHAR"
+          - ""
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - ""
+          - ""
+        - - "Year"
+          - "VARCHAR"
+          - ""
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - ""
+          - ""
+        - - "Season"
+          - "VARCHAR"
+          - ""
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - ""
+          - ""
+        - - "City"
+          - "VARCHAR"
+          - ""
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - ""
+          - ""
+        - - "Sport"
+          - "VARCHAR"
+          - ""
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - ""
+          - ""
+        - - "Event"
+          - "VARCHAR"
+          - ""
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - ""
+          - ""
+        - - "Medal"
+          - "VARCHAR"
+          - ""
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - ""
+          - ""
+        defaultDdlCollation:
+        primaryKeys:
+        clusteringKeys:
+        dataRetentionTimeInDays:
+        comment:
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+    S3 Load:
+      type: "s3-load"
+      parameters:
+        componentName: "S3 Load"
+        stage: "[Custom]"
+        authentication: "Credentials"
+        s3ObjectPrefix: "s3://devrel.matillion.com"
+        pattern: "data/structured/olympics/athlete_events.csv.gz"
+        encryption: "None"
+        warehouse: "[Environment Default]"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        targetTable: "olympic_athletes"
+        loadColumns:
+        format: "[Custom]"
+        fileType: "CSV"
+        compression: "GZIP"
+        recordDelimiter:
+        fieldDelimiter: ","
+        skipHeader: "1"
+        skipBlankLines: "False"
+        dateFormat:
+        timeFormat:
+        timestampFormat:
+        escape:
+        escapeUnenclosedField:
+        trimSpace: "False"
+        fieldOptionallyEnclosed: "\""
+        nullIf:
+        errorOnColumnCountMismatch: "False"
+        emptyFieldAsNull: "True"
+        replaceInvalidCharacters: "False"
+        encodingType:
+        onError: "Abort Statement"
+        sizeLimitB:
+        purgeFiles: "False"
+        truncateColumns: "False"
+        forceLoad: "False"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+    Create Table NOC Region:
+      type: "create-table-v2"
+      transitions:
+        success:
+        - "S3 Load 2"
+      parameters:
+        componentName: "Create Table NOC Region"
+        createMethod: "Replace"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        table: "noc_region"
+        snowflakeTableType: "Permanent"
+        columns:
+        - - "NOC"
+          - "VARCHAR"
+          - ""
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - ""
+          - ""
+        - - "Region"
+          - "VARCHAR"
+          - ""
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - ""
+          - ""
+        - - "Notes"
+          - "VARCHAR"
+          - ""
+          - ""
+          - ""
+          - "No"
+          - "No"
+          - ""
+          - ""
+        defaultDdlCollation:
+        primaryKeys:
+        clusteringKeys:
+        dataRetentionTimeInDays:
+        comment:
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+    S3 Load 2:
+      type: "s3-load"
+      parameters:
+        componentName: "S3 Load 2"
+        stage: "[Custom]"
+        authentication: "Credentials"
+        s3ObjectPrefix: "s3://devrel.matillion.com"
+        pattern: "data/structured/olympics/noc_regions.csv.gz"
+        encryption: "None"
+        warehouse: "[Environment Default]"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        targetTable: "noc_region"
+        loadColumns:
+        format: "[Custom]"
+        fileType: "CSV"
+        compression: "GZIP"
+        recordDelimiter: "\\r"
+        fieldDelimiter: ","
+        skipHeader: "1"
+        skipBlankLines: "False"
+        dateFormat:
+        timeFormat:
+        timestampFormat:
+        escape:
+        escapeUnenclosedField:
+        trimSpace: "False"
+        fieldOptionallyEnclosed: "\""
+        nullIf:
+        errorOnColumnCountMismatch: "False"
+        emptyFieldAsNull: "True"
+        replaceInvalidCharacters: "False"
+        encodingType:
+        onError: "Abort Statement"
+        sizeLimitB:
+        purgeFiles: "False"
+        truncateColumns: "False"
+        forceLoad: "False"
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+        updateGridVariables:
+design:
+  components:
+    Start:
+      position:
+        x: 0
+        "y": 0
+      tempMetlId:
+    Create Olympic Athletes:
+      position:
+        x: 160
+        "y": 0
+      tempMetlId:
+    S3 Load:
+      position:
+        x: 320
+        "y": 0
+      tempMetlId:
+    Create Table NOC Region:
+      position:
+        x: 160
+        "y": 110
+      tempMetlId:
+    S3 Load 2:
+      position:
+        x: 320
+        "y": 130
+      tempMetlId:
