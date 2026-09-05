@@ -1,0 +1,115 @@
+type: "orchestration"
+version: "1.0"
+pipeline:
+  metadata:
+    description: "Setup pipeline - creates sample transaction data for Fixed Flow\
+      \ business use cases"
+  components:
+    Start:
+      type: "start"
+      transitions:
+        unconditional:
+        - "Create Transaction Table"
+      parameters:
+        componentName: "Start"
+    Create Transaction Table:
+      type: "create-table-v2"
+      transitions:
+        success:
+        - "Insert Sample Transactions"
+      parameters:
+        componentName: "Create Transaction Table"
+        createMethod: "Replace"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        table: "TRANSACTIONS"
+        snowflakeTableType: "Permanent"
+        columns:
+        - - "TRANSACTION_ID"
+          - "NUMBER"
+          - "10"
+          - "0"
+          - ""
+          - "Yes"
+          - "Yes"
+          - ""
+          - ""
+        - - "PRODUCT_CODE"
+          - "VARCHAR"
+          - "50"
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - ""
+          - ""
+        - - "AMOUNT"
+          - "NUMBER"
+          - "12"
+          - "2"
+          - ""
+          - "Yes"
+          - "No"
+          - ""
+          - ""
+        - - "CURRENCY_CODE"
+          - "VARCHAR"
+          - "3"
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - ""
+          - ""
+        - - "TRANSACTION_DATE"
+          - "DATE"
+          - ""
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - ""
+          - ""
+        defaultDdlCollation:
+        primaryKeys:
+        - "TRANSACTION_ID"
+        clusteringKeys:
+        dataRetentionTimeInDays:
+        comment: "Sample transactions for Fixed Flow demos"
+    Insert Sample Transactions:
+      type: "sql-executor"
+      parameters:
+        componentName: "Insert Sample Transactions"
+        scriptLocation: "Component"
+        declareSqlVariables:
+        variablesToInclude:
+        fileName:
+        sqlScript: |
+          INSERT INTO TRANSACTIONS VALUES
+            (1, 'LAPTOP', 1200.00, 'USD', '2024-01-15'),
+            (2, 'PHONE', 800.00, 'EUR', '2024-01-16'),
+            (3, 'TABLET', 500.00, 'GBP', '2024-01-17'),
+            (4, 'MONITOR', 350.00, 'JPY', '2024-01-18'),
+            (5, 'KEYBOARD', 75.00, 'USD', '2024-01-19'),
+            (6, 'MOUSE', 25.00, 'EUR', '2024-01-20'),
+            (7, 'HEADSET', 150.00, 'GBP', '2024-01-21'),
+            (8, 'WEBCAM', 100.00, 'USD', '2024-01-22'),
+            (9, 'SPEAKER', 200.00, 'JPY', '2024-01-23'),
+            (10, 'CHARGER', 30.00, 'EUR', '2024-01-24')
+design:
+  components:
+    Insert Sample Transactions:
+      position:
+        x: 320
+        "y": 0
+      tempMetlId: 3
+    Start:
+      position:
+        x: 0
+        "y": 0
+      tempMetlId: 1
+    Create Transaction Table:
+      position:
+        x: 160
+        "y": 0
+      tempMetlId: 2
