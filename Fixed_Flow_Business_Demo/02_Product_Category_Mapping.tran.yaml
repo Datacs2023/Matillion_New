@@ -1,0 +1,222 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  metadata:
+    description: "Business Use Case 2: Product Category Mapping - Enrich transactions\
+      \ with product categories, business units, and margin information using Fixed\
+      \ Flow"
+  components:
+    Load Transactions:
+      type: "table-input"
+      parameters:
+        componentName: "Load Transactions"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        targetTable: "TRANSACTIONS"
+        columnNames:
+        - "TRANSACTION_ID"
+        - "PRODUCT_CODE"
+        - "AMOUNT"
+        - "CURRENCY_CODE"
+        - "TRANSACTION_DATE"
+    Product Category Lookup:
+      type: "fixed-flow"
+      parameters:
+        componentName: "Product Category Lookup"
+        columns:
+        - - "PRODUCT_CODE"
+          - "VARCHAR"
+          - "50"
+          - ""
+        - - "PRODUCT_NAME"
+          - "VARCHAR"
+          - "100"
+          - ""
+        - - "CATEGORY"
+          - "VARCHAR"
+          - "50"
+          - ""
+        - - "BUSINESS_UNIT"
+          - "VARCHAR"
+          - "50"
+          - ""
+        - - "MARGIN_PERCENT"
+          - "FLOAT"
+          - ""
+          - "2"
+        - - "IS_PROMOTED"
+          - "BOOLEAN"
+          - ""
+          - ""
+        values:
+        - - "LAPTOP"
+          - "Laptop Pro 15"
+          - "Electronics"
+          - "Hardware"
+          - "22.5"
+          - "true"
+        - - "PHONE"
+          - "Smartphone X"
+          - "Electronics"
+          - "Mobile"
+          - "35.0"
+          - "true"
+        - - "TABLET"
+          - "Tablet Air"
+          - "Electronics"
+          - "Mobile"
+          - "28.0"
+          - "false"
+        - - "MONITOR"
+          - "27 inch Display"
+          - "Accessories"
+          - "Hardware"
+          - "18.5"
+          - "false"
+        - - "KEYBOARD"
+          - "Wireless Keyboard"
+          - "Accessories"
+          - "Hardware"
+          - "45.0"
+          - "false"
+        - - "MOUSE"
+          - "Optical Mouse"
+          - "Accessories"
+          - "Hardware"
+          - "50.0"
+          - "false"
+        - - "HEADSET"
+          - "Bluetooth Headset"
+          - "Accessories"
+          - "Audio"
+          - "40.0"
+          - "true"
+        - - "WEBCAM"
+          - "HD Webcam"
+          - "Accessories"
+          - "Hardware"
+          - "38.0"
+          - "false"
+        - - "SPEAKER"
+          - "Wireless Speaker"
+          - "Accessories"
+          - "Audio"
+          - "33.0"
+          - "false"
+        - - "CHARGER"
+          - "Universal Charger"
+          - "Accessories"
+          - "Hardware"
+          - "55.0"
+          - "false"
+    Enrich Transactions:
+      type: "join"
+      sources:
+      - "Load Transactions"
+      - "Product Category Lookup"
+      parameters:
+        componentName: "Enrich Transactions"
+        mainTable: "Load Transactions"
+        mainTableAlias: "t"
+        joins:
+        - - "Product Category Lookup"
+          - "p"
+          - "Left"
+        joinExpressions:
+        - - "\"t\".\"PRODUCT_CODE\"=\"p\".\"PRODUCT_CODE\""
+          - "t_Left_p"
+        columnMappings:
+        - - "t.TRANSACTION_ID"
+          - "TRANSACTION_ID"
+        - - "t.AMOUNT"
+          - "AMOUNT"
+        - - "t.CURRENCY_CODE"
+          - "CURRENCY_CODE"
+        - - "t.TRANSACTION_DATE"
+          - "TRANSACTION_DATE"
+        - - "p.PRODUCT_CODE"
+          - "PRODUCT_CODE"
+        - - "p.PRODUCT_NAME"
+          - "PRODUCT_NAME"
+        - - "p.CATEGORY"
+          - "CATEGORY"
+        - - "p.BUSINESS_UNIT"
+          - "BUSINESS_UNIT"
+        - - "p.MARGIN_PERCENT"
+          - "MARGIN_PERCENT"
+        - - "p.IS_PROMOTED"
+          - "IS_PROMOTED"
+        outputColumns:
+        - - "t"
+          - "TRANSACTION_ID"
+        - - "t"
+          - "PRODUCT_CODE"
+        - - "p"
+          - "PRODUCT_NAME"
+        - - "p"
+          - "CATEGORY"
+        - - "p"
+          - "BUSINESS_UNIT"
+        - - "t"
+          - "AMOUNT"
+        - - "p"
+          - "MARGIN_PERCENT"
+        - - "p"
+          - "IS_PROMOTED"
+        - - "t"
+          - "TRANSACTION_DATE"
+    Calculate Business Metrics:
+      type: "calculator"
+      sources:
+      - "Enrich Transactions"
+      parameters:
+        componentName: "Calculate Business Metrics"
+        includeInputColumns: "Yes"
+        calculations:
+        - - |
+            "AMOUNT" * ("MARGIN_PERCENT" / 100)
+          - "ESTIMATED_MARGIN"
+        - - "CASE \n  WHEN \"IS_PROMOTED\" = TRUE THEN 'Promotional Sale'\n  WHEN\
+            \ \"AMOUNT\" > 500 THEN 'High Value'\n  ELSE 'Standard Sale'\nEND\n"
+          - "SALE_TYPE"
+    Rewrite Table:
+      type: "rewrite-table"
+      sources:
+      - "Calculate Business Metrics"
+      parameters:
+        componentName: "Rewrite Table"
+        warehouse: "[Environment Default]"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        targetTable: "TXN_PRD_BUSS_TBL"
+        orderBy:
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+design:
+  components:
+    Product Category Lookup:
+      position:
+        x: 0
+        "y": 150
+      tempMetlId: 2
+    Calculate Business Metrics:
+      position:
+        x: 500
+        "y": 75
+      tempMetlId: 4
+    Load Transactions:
+      position:
+        x: 0
+        "y": 0
+      tempMetlId: 1
+    Enrich Transactions:
+      position:
+        x: 250
+        "y": 75
+      tempMetlId: 3
+    Rewrite Table:
+      position:
+        x: 660
+        "y": 75
+      tempMetlId: 5

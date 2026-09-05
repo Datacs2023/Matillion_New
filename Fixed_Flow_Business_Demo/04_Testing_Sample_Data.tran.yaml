@@ -1,0 +1,325 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  metadata:
+    description: "Business Use Case 4: Testing with Sample Data - Use Fixed Flow to\
+      \ generate test data for pipeline development and validation"
+  components:
+    Test Customer Data:
+      type: "fixed-flow"
+      parameters:
+        componentName: "Test Customer Data"
+        columns:
+        - - "CUSTOMER_ID"
+          - "NUMBER"
+          - "10"
+          - "0"
+        - - "CUSTOMER_NAME"
+          - "VARCHAR"
+          - "100"
+          - ""
+        - - "EMAIL"
+          - "VARCHAR"
+          - "100"
+          - ""
+        - - "SEGMENT"
+          - "VARCHAR"
+          - "20"
+          - ""
+        - - "ANNUAL_REVENUE"
+          - "NUMBER"
+          - "12"
+          - "2"
+        - - "EMPLOYEE_COUNT"
+          - "NUMBER"
+          - "6"
+          - "0"
+        - - "IS_ACTIVE"
+          - "BOOLEAN"
+          - ""
+          - ""
+        - - "SIGNUP_DATE"
+          - "DATE"
+          - "0"
+          - "0"
+        values:
+        - - "1001"
+          - "Acme Corporation"
+          - "contact@acme.com"
+          - "Enterprise"
+          - "5000000.00"
+          - "250"
+          - "true"
+          - "2020-01-15"
+        - - "1002"
+          - "Beta Industries"
+          - "info@beta.com"
+          - "Corporate"
+          - "1200000.00"
+          - "85"
+          - "true"
+          - "2021-03-22"
+        - - "1003"
+          - "Gamma LLC"
+          - "sales@gamma.com"
+          - "SMB"
+          - "250000.00"
+          - "15"
+          - "true"
+          - "2022-06-10"
+        - - "1004"
+          - "Delta Inc"
+          - "support@delta.com"
+          - "Retail"
+          - "50000.00"
+          - "5"
+          - "false"
+          - "2023-02-01"
+        - - "1005"
+          - "Epsilon Co"
+          - "hello@epsilon.com"
+          - "Corporate"
+          - "800000.00"
+          - "45"
+          - "true"
+          - "2021-09-15"
+        - - "1006"
+          - "Zeta Partners"
+          - "contact@zeta.com"
+          - "Enterprise"
+          - "3500000.00"
+          - "180"
+          - "true"
+          - "2019-11-20"
+        - - "1007"
+          - "Eta Systems"
+          - "info@eta.com"
+          - "SMB"
+          - "180000.00"
+          - "12"
+          - "true"
+          - "2023-01-05"
+        - - "1008"
+          - "Theta Group"
+          - "sales@theta.com"
+          - "Retail"
+          - "75000.00"
+          - "8"
+          - "false"
+          - "2023-04-18"
+    Test Order Data:
+      type: "fixed-flow"
+      parameters:
+        componentName: "Test Order Data"
+        columns:
+        - - "ORDER_ID"
+          - "NUMBER"
+          - "10"
+          - "0"
+        - - "CUSTOMER_ID"
+          - "NUMBER"
+          - "10"
+          - "0"
+        - - "ORDER_DATE"
+          - "DATE"
+          - "0"
+          - "0"
+        - - "TOTAL_AMOUNT"
+          - "NUMBER"
+          - "12"
+          - "2"
+        - - "STATUS"
+          - "VARCHAR"
+          - "20"
+          - ""
+        - - "ITEMS_COUNT"
+          - "NUMBER"
+          - "3"
+          - "0"
+        values:
+        - - "5001"
+          - "1001"
+          - "2024-01-15"
+          - "15000.00"
+          - "Completed"
+          - "5"
+        - - "5002"
+          - "1002"
+          - "2024-01-16"
+          - "8500.00"
+          - "Completed"
+          - "3"
+        - - "5003"
+          - "1003"
+          - "2024-01-17"
+          - "2100.00"
+          - "Pending"
+          - "2"
+        - - "5004"
+          - "1001"
+          - "2024-01-18"
+          - "22000.00"
+          - "Completed"
+          - "8"
+        - - "5005"
+          - "1005"
+          - "2024-01-19"
+          - "12500.00"
+          - "Shipped"
+          - "4"
+        - - "5006"
+          - "1006"
+          - "2024-01-20"
+          - "35000.00"
+          - "Completed"
+          - "12"
+        - - "5007"
+          - "1003"
+          - "2024-01-21"
+          - "1850.00"
+          - "Cancelled"
+          - "1"
+        - - "5008"
+          - "1007"
+          - "2024-01-22"
+          - "3200.00"
+          - "Pending"
+          - "2"
+    Join Customer Orders:
+      type: "join"
+      sources:
+      - "Test Order Data"
+      - "Test Customer Data"
+      parameters:
+        componentName: "Join Customer Orders"
+        mainTable: "Test Order Data"
+        mainTableAlias: "o"
+        joins:
+        - - "Test Customer Data"
+          - "c"
+          - "Inner"
+        joinExpressions:
+        - - "\"o\".\"CUSTOMER_ID\"=\"c\".\"CUSTOMER_ID\""
+          - "o_Inner_c"
+        columnMappings:
+        - - "o.ORDER_ID"
+          - "ORDER_ID"
+        - - "o.CUSTOMER_ID"
+          - "CUSTOMER_ID"
+        - - "o.ORDER_DATE"
+          - "ORDER_DATE"
+        - - "o.TOTAL_AMOUNT"
+          - "TOTAL_AMOUNT"
+        - - "o.STATUS"
+          - "STATUS"
+        - - "o.ITEMS_COUNT"
+          - "ITEMS_COUNT"
+        - - "c.CUSTOMER_ID"
+          - "CUSTOMER_ID"
+        - - "c.CUSTOMER_NAME"
+          - "CUSTOMER_NAME"
+        - - "c.EMAIL"
+          - "EMAIL"
+        - - "c.SEGMENT"
+          - "SEGMENT"
+        - - "c.ANNUAL_REVENUE"
+          - "ANNUAL_REVENUE"
+        - - "c.IS_ACTIVE"
+          - "IS_ACTIVE"
+        outputColumns:
+        - - "o"
+          - "ORDER_ID"
+        - - "o"
+          - "ORDER_DATE"
+        - - "c"
+          - "CUSTOMER_ID"
+        - - "c"
+          - "CUSTOMER_NAME"
+        - - "c"
+          - "SEGMENT"
+        - - "c"
+          - "IS_ACTIVE"
+        - - "o"
+          - "TOTAL_AMOUNT"
+        - - "o"
+          - "STATUS"
+        - - "o"
+          - "ITEMS_COUNT"
+    Test Filters:
+      type: "filter"
+      sources:
+      - "Join Customer Orders"
+      parameters:
+        componentName: "Test Filters"
+        filterConditions:
+        - - "TOTAL_AMOUNT"
+          - "Is"
+          - "Greater than or equal to"
+          - "5000"
+        - - "STATUS"
+          - "Is"
+          - "Equal to"
+          - "Completed"
+        combineCondition: "And"
+    Test Aggregation:
+      type: "aggregate"
+      sources:
+      - "Test Filters"
+      parameters:
+        componentName: "Test Aggregation"
+        groupings:
+        - "SEGMENT"
+        aggregations:
+        - - "TOTAL_AMOUNT"
+          - "Sum"
+        - - "ORDER_ID"
+          - "Count"
+        - - "TOTAL_AMOUNT"
+          - "Average"
+        groupingType: "Group By"
+    Rewrite Table:
+      type: "rewrite-table"
+      sources:
+      - "Test Aggregation"
+      parameters:
+        componentName: "Rewrite Table"
+        warehouse: "[Environment Default]"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        targetTable: "TEST_RESULTS_BY_SEGMENT"
+        orderBy:
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+design:
+  components:
+    Test Order Data:
+      position:
+        x: 0
+        "y": 150
+      tempMetlId: 2
+    Test Aggregation:
+      position:
+        x: 800
+        "y": 75
+      tempMetlId: 5
+    Test Customer Data:
+      position:
+        x: 0
+        "y": 0
+      tempMetlId: 1
+    Join Customer Orders:
+      position:
+        x: 300
+        "y": 75
+      tempMetlId: 3
+    Test Filters:
+      position:
+        x: 550
+        "y": 75
+      tempMetlId: 4
+    Rewrite Table:
+      position:
+        x: 960
+        "y": 75
+      tempMetlId: 6

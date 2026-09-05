@@ -1,0 +1,167 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  metadata:
+    description: "Business Use Case 1: Currency Lookup - Use Fixed Flow to provide\
+      \ currency conversion rates for international transactions"
+  components:
+    Load Transactions:
+      type: "table-input"
+      parameters:
+        componentName: "Load Transactions"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        targetTable: "TRANSACTIONS"
+        columnNames:
+        - "TRANSACTION_ID"
+        - "PRODUCT_CODE"
+        - "AMOUNT"
+        - "CURRENCY_CODE"
+        - "TRANSACTION_DATE"
+    Currency Conversion Rates:
+      type: "fixed-flow"
+      parameters:
+        componentName: "Currency Conversion Rates"
+        columns:
+        - - "CURRENCY_CODE"
+          - "VARCHAR"
+          - "3"
+          - ""
+        - - "CURRENCY_NAME"
+          - "VARCHAR"
+          - "50"
+          - ""
+        - - "USD_CONVERSION_RATE"
+          - "FLOAT"
+          - ""
+          - "4"
+        - - "REGION"
+          - "VARCHAR"
+          - "50"
+          - ""
+        values:
+        - - "USD"
+          - "US Dollar"
+          - "1.0000"
+          - "North America"
+        - - "EUR"
+          - "Euro"
+          - "1.0850"
+          - "Europe"
+        - - "GBP"
+          - "British Pound"
+          - "1.2650"
+          - "Europe"
+        - - "JPY"
+          - "Japanese Yen"
+          - "0.0067"
+          - "Asia Pacific"
+        - - "CAD"
+          - "Canadian Dollar"
+          - "0.7350"
+          - "North America"
+        - - "AUD"
+          - "Australian Dollar"
+          - "0.6550"
+          - "Asia Pacific"
+    Join With Currency Rates:
+      type: "join"
+      sources:
+      - "Load Transactions"
+      - "Currency Conversion Rates"
+      parameters:
+        componentName: "Join With Currency Rates"
+        mainTable: "Load Transactions"
+        mainTableAlias: "t"
+        joins:
+        - - "Currency Conversion Rates"
+          - "c"
+          - "Inner"
+        joinExpressions:
+        - - "\"t\".\"CURRENCY_CODE\"=\"c\".\"CURRENCY_CODE\""
+          - "t_Inner_c"
+        columnMappings:
+        - - "t.TRANSACTION_DATE"
+          - "TRANSACTION_DATE"
+        - - "t.TRANSACTION_ID"
+          - "TRANSACTION_ID"
+        - - "t.PRODUCT_CODE"
+          - "PRODUCT_CODE"
+        - - "t.AMOUNT"
+          - "AMOUNT"
+        - - "c.REGION"
+          - "REGION"
+        - - "c.CURRENCY_CODE"
+          - "CURRENCY_CODE"
+        - - "c.CURRENCY_NAME"
+          - "CURRENCY_NAME"
+        - - "c.USD_CONVERSION_RATE"
+          - "USD_CONVERSION_RATE"
+        outputColumns:
+        - - "t"
+          - "TRANSACTION_ID"
+        - - "t"
+          - "PRODUCT_CODE"
+        - - "t"
+          - "AMOUNT"
+          - "ORIGINAL_AMOUNT"
+        - - "t"
+          - "CURRENCY_CODE"
+        - - "c"
+          - "CURRENCY_NAME"
+        - - "c"
+          - "USD_CONVERSION_RATE"
+        - - "c"
+          - "REGION"
+    Calculate USD Amount:
+      type: "calculator"
+      sources:
+      - "Join With Currency Rates"
+      parameters:
+        componentName: "Calculate USD Amount"
+        includeInputColumns: "Yes"
+        calculations:
+        - - |
+            ROUND("AMOUNT" * "USD_CONVERSION_RATE",2)
+          - "AMOUNT_IN_USD"
+        - - "CASE \n  WHEN \"AMOUNT_IN_USD\" >= 1000 THEN 'High Value'\n  WHEN \"\
+            AMOUNT_IN_USD\" >= 100 THEN 'Medium Value'\n  ELSE 'Low Value'\nEND\n"
+          - "VALUE_CATEGORY"
+    Write Results:
+      type: "rewrite-table"
+      sources:
+      - "Calculate USD Amount"
+      parameters:
+        componentName: "Write Results"
+        targetTable: "TRANSACTIONS_WITH_USD"
+        stage: "[Custom]"
+        warehouse: "[Environment Default]"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+design:
+  components:
+    Calculate USD Amount:
+      position:
+        x: 400
+        "y": 60
+      tempMetlId: 4
+    Join With Currency Rates:
+      position:
+        x: 200
+        "y": 60
+      tempMetlId: 3
+    Write Results:
+      position:
+        x: 600
+        "y": 60
+      tempMetlId: 5
+    Load Transactions:
+      position:
+        x: 0
+        "y": 0
+      tempMetlId: 1
+    Currency Conversion Rates:
+      position:
+        x: 0
+        "y": 120
+      tempMetlId: 2

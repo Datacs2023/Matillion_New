@@ -1,0 +1,330 @@
+type: "transformation"
+version: "1.0"
+pipeline:
+  metadata:
+    description: "Business Use Case 3: Business Rules Configuration - Apply customer\
+      \ segment rules, discounts, and credit limits using Fixed Flow"
+  components:
+    Load Transactions:
+      type: "table-input"
+      parameters:
+        componentName: "Load Transactions"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        targetTable: "TRANSACTIONS"
+        columnNames:
+        - "TRANSACTION_ID"
+        - "PRODUCT_CODE"
+        - "AMOUNT"
+        - "CURRENCY_CODE"
+        - "TRANSACTION_DATE"
+    Customer Segments:
+      type: "fixed-flow"
+      parameters:
+        componentName: "Customer Segments"
+        columns:
+        - - "CUSTOMER_ID"
+          - "NUMBER"
+          - "10"
+          - "0"
+        - - "CUSTOMER_NAME"
+          - "VARCHAR"
+          - "100"
+          - ""
+        - - "SEGMENT"
+          - "VARCHAR"
+          - "20"
+          - ""
+        - - "REGION"
+          - "VARCHAR"
+          - "50"
+          - ""
+        values:
+        - - "1"
+          - "Acme Corporation"
+          - "Enterprise"
+          - "North America"
+        - - "2"
+          - "Beta Industries"
+          - "Corporate"
+          - "Europe"
+        - - "3"
+          - "Gamma LLC"
+          - "SMB"
+          - "Asia Pacific"
+        - - "4"
+          - "Delta Inc"
+          - "Retail"
+          - "North America"
+        - - "5"
+          - "Epsilon Co"
+          - "Corporate"
+          - "Europe"
+        - - "6"
+          - "Zeta Partners"
+          - "Enterprise"
+          - "Asia Pacific"
+        - - "7"
+          - "Eta Systems"
+          - "SMB"
+          - "North America"
+        - - "8"
+          - "Theta Group"
+          - "Retail"
+          - "Europe"
+    Business Rules:
+      type: "fixed-flow"
+      parameters:
+        componentName: "Business Rules"
+        columns:
+        - - "SEGMENT"
+          - "VARCHAR"
+          - "20"
+          - ""
+        - - "DISCOUNT_PERCENT"
+          - "FLOAT"
+          - ""
+          - "2"
+        - - "CREDIT_LIMIT"
+          - "NUMBER"
+          - "12"
+          - "2"
+        - - "PRIORITY_LEVEL"
+          - "NUMBER"
+          - "1"
+          - "0"
+        - - "APPROVAL_REQUIRED"
+          - "BOOLEAN"
+          - ""
+          - ""
+        - - "PAYMENT_TERMS_DAYS"
+          - "NUMBER"
+          - "3"
+          - "0"
+        values:
+        - - "Enterprise"
+          - "15.0"
+          - "100000.00"
+          - "1"
+          - "false"
+          - "60"
+        - - "Corporate"
+          - "10.0"
+          - "50000.00"
+          - "2"
+          - "false"
+          - "45"
+        - - "SMB"
+          - "5.0"
+          - "10000.00"
+          - "3"
+          - "true"
+          - "30"
+        - - "Retail"
+          - "0.0"
+          - "1000.00"
+          - "4"
+          - "true"
+          - "15"
+    Add Customer Info:
+      type: "calculator"
+      sources:
+      - "Load Transactions"
+      parameters:
+        componentName: "Add Customer Info"
+        includeInputColumns: "Yes"
+        calculations:
+        - - "CASE \n  WHEN \"TRANSACTION_ID\" IN (1, 4, 7) THEN 1\n  WHEN \"TRANSACTION_ID\"\
+            \ IN (2, 5, 8) THEN 2\n  WHEN \"TRANSACTION_ID\" IN (3, 6, 9) THEN 3\n\
+            \  ELSE 4\nEND\n"
+          - "CUSTOMER_ID"
+    Join Customer Segment:
+      type: "join"
+      sources:
+      - "Add Customer Info"
+      - "Customer Segments"
+      parameters:
+        componentName: "Join Customer Segment"
+        mainTable: "Add Customer Info"
+        mainTableAlias: "t"
+        joins:
+        - - "Customer Segments"
+          - "c"
+          - "Left"
+        joinExpressions:
+        - - "\"t\".\"CUSTOMER_ID\"=\"c\".\"CUSTOMER_ID\""
+          - "t_Left_c"
+        columnMappings:
+        - - "t.TRANSACTION_DATE"
+          - "TRANSACTION_DATE"
+        - - "t.TRANSACTION_ID"
+          - "TRANSACTION_ID"
+        - - "c.REGION"
+          - "REGION"
+        - - "t.PRODUCT_CODE"
+          - "PRODUCT_CODE"
+        - - "c.SEGMENT"
+          - "SEGMENT"
+        - - "c.CUSTOMER_ID"
+          - "CUSTOMER_ID"
+        - - "c.CUSTOMER_NAME"
+          - "CUSTOMER_NAME"
+        - - "t.AMOUNT"
+          - "AMOUNT"
+        - - "t.CURRENCY_CODE"
+          - "CURRENCY_CODE"
+        outputColumns:
+        - - "t"
+          - "TRANSACTION_ID"
+        - - "t"
+          - "CUSTOMER_ID"
+        - - "c"
+          - "CUSTOMER_NAME"
+        - - "c"
+          - "SEGMENT"
+        - - "c"
+          - "REGION"
+        - - "t"
+          - "PRODUCT_CODE"
+        - - "t"
+          - "AMOUNT"
+        - - "t"
+          - "TRANSACTION_DATE"
+    Apply Business Rules:
+      type: "join"
+      sources:
+      - "Join Customer Segment"
+      - "Business Rules"
+      parameters:
+        componentName: "Apply Business Rules"
+        mainTable: "Join Customer Segment"
+        mainTableAlias: "t"
+        joins:
+        - - "Business Rules"
+          - "r"
+          - "Left"
+        joinExpressions:
+        - - "\"t\".\"SEGMENT\"=\"r\".\"SEGMENT\""
+          - "t_Left_r"
+        columnMappings:
+        - - "t.TRANSACTION_ID"
+          - "TRANSACTION_ID"
+        - - "t.CUSTOMER_ID"
+          - "CUSTOMER_ID"
+        - - "t.CUSTOMER_NAME"
+          - "CUSTOMER_NAME"
+        - - "t.SEGMENT"
+          - "SEGMENT"
+        - - "t.REGION"
+          - "REGION"
+        - - "t.PRODUCT_CODE"
+          - "PRODUCT_CODE"
+        - - "t.AMOUNT"
+          - "AMOUNT"
+        - - "t.TRANSACTION_DATE"
+          - "TRANSACTION_DATE"
+        - - "r.DISCOUNT_PERCENT"
+          - "DISCOUNT_PERCENT"
+        - - "r.CREDIT_LIMIT"
+          - "CREDIT_LIMIT"
+        - - "r.PRIORITY_LEVEL"
+          - "PRIORITY_LEVEL"
+        - - "r.APPROVAL_REQUIRED"
+          - "APPROVAL_REQUIRED"
+        - - "r.PAYMENT_TERMS_DAYS"
+          - "PAYMENT_TERMS_DAYS"
+        outputColumns:
+        - - "t"
+          - "TRANSACTION_ID"
+        - - "t"
+          - "CUSTOMER_ID"
+        - - "t"
+          - "CUSTOMER_NAME"
+        - - "t"
+          - "SEGMENT"
+        - - "t"
+          - "AMOUNT"
+        - - "r"
+          - "DISCOUNT_PERCENT"
+        - - "r"
+          - "CREDIT_LIMIT"
+        - - "r"
+          - "PRIORITY_LEVEL"
+        - - "r"
+          - "APPROVAL_REQUIRED"
+        - - "r"
+          - "PAYMENT_TERMS_DAYS"
+    Calculate Final Amount:
+      type: "calculator"
+      sources:
+      - "Apply Business Rules"
+      parameters:
+        componentName: "Calculate Final Amount"
+        includeInputColumns: "Yes"
+        calculations:
+        - - |
+            "AMOUNT" * (1 - "DISCOUNT_PERCENT" / 100)
+          - "DISCOUNTED_AMOUNT"
+        - - "CASE \n  WHEN \"DISCOUNTED_AMOUNT\" > \"CREDIT_LIMIT\" THEN 'Exceeds\
+            \ Credit Limit'\n  WHEN \"APPROVAL_REQUIRED\" = TRUE AND \"DISCOUNTED_AMOUNT\"\
+            \ > 500 THEN 'Requires Approval'\n  ELSE 'Auto-Approved'\nEND\n"
+          - "APPROVAL_STATUS"
+        - - |
+            DATEADD(day, "PAYMENT_TERMS_DAYS", CURRENT_DATE())
+          - "PAYMENT_DUE_DATE"
+    Rewrite Table:
+      type: "rewrite-table"
+      sources:
+      - "Calculate Final Amount"
+      parameters:
+        componentName: "Rewrite Table"
+        warehouse: "[Environment Default]"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        targetTable: "TXN_WITH_BUSS_RULE"
+        orderBy:
+      postProcessing:
+        updateOutputMessage:
+        updateScalarVariables:
+design:
+  components:
+    Business Rules:
+      position:
+        x: 0
+        "y": 200
+      tempMetlId: 3
+    Join Customer Segment:
+      position:
+        x: 500
+        "y": 50
+      tempMetlId: 5
+    Calculate Final Amount:
+      position:
+        x: 1000
+        "y": 100
+      tempMetlId: 7
+    Load Transactions:
+      position:
+        x: 0
+        "y": 100
+      tempMetlId: 1
+    Add Customer Info:
+      position:
+        x: 250
+        "y": 100
+      tempMetlId: 4
+    Apply Business Rules:
+      position:
+        x: 750
+        "y": 100
+      tempMetlId: 6
+    Customer Segments:
+      position:
+        x: 0
+        "y": 0
+      tempMetlId: 2
+    Rewrite Table:
+      position:
+        x: 1160
+        "y": 100
+      tempMetlId: 8
