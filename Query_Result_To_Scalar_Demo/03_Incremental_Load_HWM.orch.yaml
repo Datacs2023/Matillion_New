@@ -1,0 +1,200 @@
+type: "orchestration"
+version: "1.0"
+pipeline:
+  metadata:
+    description: "Incremental load using high-water mark pattern - demonstrates Query\
+      \ Result to Scalar component"
+  components:
+    Start:
+      type: "start"
+      transitions:
+        unconditional:
+        - "Get Current HWM"
+      parameters:
+        componentName: "Start"
+    Get Current HWM:
+      type: "query-to-scalar"
+      transitions:
+        success:
+        - "Load Incremental Data"
+      parameters:
+        componentName: "Get Current HWM"
+        mode: "Advanced"
+        query: |
+          SELECT HWM_VALUE as current_hwm
+          FROM HWM_CONTROL
+          WHERE TABLE_NAME = 'SOURCE_TRANSACTIONS'
+        database:
+        schema:
+        table:
+        tableColumns:
+        orderBy:
+        sort:
+        limit:
+        filterConditions:
+        combineCondition:
+        scalarVariableMapping:
+        - - "current_hwm_value"
+          - "CURRENT_HWM"
+    Load Incremental Data:
+      type: "sql-executor"
+      transitions:
+        success:
+        - "Get New Max Date"
+      parameters:
+        componentName: "Load Incremental Data"
+        scriptLocation: "Component"
+        declareSqlVariables: "Include selected"
+        variablesToInclude:
+        - "current_hwm_value"
+        fileName:
+        sqlScript: "-- Load only new transactions since last high-water mark\nINSERT\
+          \ INTO TARGET_TRANSACTIONS (TRANSACTION_ID, CUSTOMER_ID, AMOUNT, TRANSACTION_DATE,\
+          \ STATUS)\nSELECT \n  TRANSACTION_ID,\n  CUSTOMER_ID,\n  AMOUNT,\n  TRANSACTION_DATE,\n\
+          \  STATUS\nFROM SOURCE_TRANSACTIONS\nWHERE TRANSACTION_DATE > TO_TIMESTAMP_NTZ($current_hwm_value)\n"
+    Get New Max Date:
+      type: "query-to-scalar"
+      transitions:
+        success:
+        - "Get Rows Loaded Count"
+      parameters:
+        componentName: "Get New Max Date"
+        mode: "Advanced"
+        query: |
+          SELECT MAX(TRANSACTION_DATE) as max_date
+          FROM SOURCE_TRANSACTIONS
+          WHERE TRANSACTION_DATE > TO_TIMESTAMP_NTZ('${current_hwm_value}')
+        database:
+        schema:
+        table:
+        tableColumns:
+        orderBy:
+        sort:
+        limit:
+        filterConditions:
+        combineCondition:
+        scalarVariableMapping:
+        - - "new_max_date"
+          - "MAX_DATE"
+    Get Rows Loaded Count:
+      type: "query-to-scalar"
+      transitions:
+        success:
+        - "Update HWM"
+      parameters:
+        componentName: "Get Rows Loaded Count"
+        mode: "Advanced"
+        query: |
+          SELECT COUNT(*) as row_count
+          FROM SOURCE_TRANSACTIONS
+          WHERE TRANSACTION_DATE > TO_TIMESTAMP_NTZ('${current_hwm_value}')
+        database:
+        schema:
+        table:
+        tableColumns:
+        orderBy:
+        sort:
+        limit:
+        filterConditions:
+        combineCondition:
+        scalarVariableMapping:
+        - - "rows_loaded"
+          - "ROW_COUNT"
+    Update HWM:
+      type: "sql-executor"
+      transitions:
+        success:
+        - "Log Load Results"
+      parameters:
+        componentName: "Update HWM"
+        scriptLocation: "Component"
+        declareSqlVariables: "Include selected"
+        variablesToInclude:
+        - "new_max_date"
+        fileName:
+        sqlScript: "-- Update high-water mark to new maximum date\nUPDATE HWM_CONTROL\n\
+          SET \n  HWM_VALUE = $new_max_date,\n  LAST_UPDATE = CURRENT_TIMESTAMP()\n\
+          WHERE TABLE_NAME = 'SOURCE_TRANSACTIONS'\n"
+    Log Load Results:
+      type: "sql-executor"
+      parameters:
+        componentName: "Log Load Results"
+        scriptLocation: "Component"
+        declareSqlVariables: "Include selected"
+        variablesToInclude:
+        - "current_hwm_value"
+        - "new_max_date"
+        - "rows_loaded"
+        fileName:
+        sqlScript: |
+          -- Create load log table if not exists
+          CREATE TABLE IF NOT EXISTS INCREMENTAL_LOAD_LOG (
+            load_timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP(),
+            previous_hwm VARCHAR(500),
+            new_hwm VARCHAR(500),
+            rows_loaded NUMBER,
+            load_type VARCHAR(50)
+          );
+
+          -- Log this incremental load
+          INSERT INTO INCREMENTAL_LOAD_LOG (previous_hwm, new_hwm, rows_loaded, load_type)
+          VALUES ($current_hwm_value, $new_max_date, $rows_loaded, 'Incremental')
+  variables:
+    current_hwm_value:
+      metadata:
+        type: "TEXT"
+        description: "Current high-water mark value retrieved from control table"
+        scope: "SHARED"
+        visibility: "PRIVATE"
+      defaultValue: ""
+    new_max_date:
+      metadata:
+        type: "TEXT"
+        description: "New maximum date from incrementally loaded data"
+        scope: "SHARED"
+        visibility: "PRIVATE"
+      defaultValue: ""
+    rows_loaded:
+      metadata:
+        type: "NUMBER"
+        description: "Number of rows loaded in this incremental run"
+        scope: "SHARED"
+        visibility: "PRIVATE"
+      defaultValue: "0"
+design:
+  components:
+    Update HWM:
+      position:
+        x: 800
+        "y": 0
+      tempMetlId: 6
+    Start:
+      position:
+        x: 0
+        "y": 0
+      tempMetlId: 1
+    Get New Max Date:
+      position:
+        x: 480
+        "y": 0
+      tempMetlId: 4
+    Log Load Results:
+      position:
+        x: 960
+        "y": 0
+      tempMetlId: 7
+    Get Current HWM:
+      position:
+        x: 160
+        "y": 0
+      tempMetlId: 2
+    Get Rows Loaded Count:
+      position:
+        x: 640
+        "y": 0
+      tempMetlId: 5
+    Load Incremental Data:
+      position:
+        x: 320
+        "y": 0
+      tempMetlId: 3

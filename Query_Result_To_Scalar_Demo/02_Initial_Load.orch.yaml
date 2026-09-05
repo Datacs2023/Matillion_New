@@ -1,0 +1,95 @@
+type: "orchestration"
+version: "1.0"
+pipeline:
+  metadata:
+    description: "Initial load pipeline - loads all data and sets initial high-water\
+      \ mark using Query Result to Scalar"
+  components:
+    Start:
+      type: "start"
+      transitions:
+        unconditional:
+        - "Initial Load to Target"
+      parameters:
+        componentName: "Start"
+    Initial Load to Target:
+      type: "sql-executor"
+      transitions:
+        success:
+        - "Get Max Transaction Date"
+      parameters:
+        componentName: "Initial Load to Target"
+        scriptLocation: "Component"
+        declareSqlVariables:
+        variablesToInclude:
+        fileName:
+        sqlScript: "-- Load all data from source to target\nINSERT INTO TARGET_TRANSACTIONS\
+          \ (TRANSACTION_ID, CUSTOMER_ID, AMOUNT, TRANSACTION_DATE, STATUS)\nSELECT\
+          \ \n  TRANSACTION_ID,\n  CUSTOMER_ID,\n  AMOUNT,\n  TRANSACTION_DATE,\n\
+          \  STATUS\nFROM SOURCE_TRANSACTIONS\n"
+    Get Max Transaction Date:
+      type: "query-to-scalar"
+      transitions:
+        success:
+        - "Update HWM Control"
+      parameters:
+        componentName: "Get Max Transaction Date"
+        mode: "Advanced"
+        query: |
+          SELECT MAX(TRANSACTION_DATE) as max_date
+          FROM TARGET_TRANSACTIONS
+        database:
+        schema:
+        table:
+        tableColumns:
+        orderBy:
+        sort:
+        limit:
+        filterConditions:
+        combineCondition:
+        scalarVariableMapping:
+        - - "max_transaction_date"
+          - "MAX_DATE"
+    Update HWM Control:
+      type: "sql-executor"
+      parameters:
+        componentName: "Update HWM Control"
+        scriptLocation: "Component"
+        declareSqlVariables: "Include selected"
+        variablesToInclude:
+        - "max_transaction_date"
+        fileName:
+        sqlScript: "-- Update high-water mark with the max date loaded\nUPDATE HWM_CONTROL\n\
+          SET \n  HWM_VALUE = $max_transaction_date,\n  LAST_UPDATE = CURRENT_TIMESTAMP()\n\
+          WHERE TABLE_NAME = 'SOURCE_TRANSACTIONS'\n"
+  variables:
+    max_transaction_date:
+      metadata:
+        type: "TEXT"
+        description: "Stores the maximum transaction date from loaded data for high-water\
+          \ mark"
+        scope: "SHARED"
+        visibility: "PRIVATE"
+      defaultValue: ""
+design:
+  components:
+    Update HWM Control:
+      position:
+        x: 480
+        "y": 0
+      tempMetlId: 4
+    Start:
+      position:
+        x: 0
+        "y": 0
+      tempMetlId: 1
+    Get Max Transaction Date:
+      position:
+        x: 320
+        "y": 0
+      tempMetlId: 3
+    Initial Load to Target:
+      position:
+        x: 160
+        "y": 0
+      tempMetlId: 2
