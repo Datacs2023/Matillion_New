@@ -1,0 +1,271 @@
+type: "orchestration"
+version: "1.0"
+pipeline:
+  metadata:
+    description: "Setup pipeline - creates source table, target table, and high-water\
+      \ mark control table for incremental load demo"
+  components:
+    Start:
+      type: "start"
+      transitions:
+        unconditional:
+        - "Create Source Transactions Table"
+      parameters:
+        componentName: "Start"
+    Create Source Transactions Table:
+      type: "create-table-v2"
+      transitions:
+        success:
+        - "Insert Initial Source Data"
+      parameters:
+        componentName: "Create Source Transactions Table"
+        createMethod: "Replace"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        table: "SOURCE_TRANSACTIONS"
+        snowflakeTableType: "Permanent"
+        columns:
+        - - "TRANSACTION_ID"
+          - "NUMBER"
+          - "10"
+          - "0"
+          - ""
+          - "Yes"
+          - "Yes"
+          - "Unique transaction ID"
+          - ""
+        - - "CUSTOMER_ID"
+          - "NUMBER"
+          - "10"
+          - "0"
+          - ""
+          - "Yes"
+          - "No"
+          - "Customer identifier"
+          - ""
+        - - "AMOUNT"
+          - "NUMBER"
+          - "12"
+          - "2"
+          - ""
+          - "Yes"
+          - "No"
+          - "Transaction amount"
+          - ""
+        - - "TRANSACTION_DATE"
+          - "TIMESTAMP_NTZ"
+          - ""
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - "Transaction timestamp"
+          - ""
+        - - "STATUS"
+          - "VARCHAR"
+          - "20"
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - "Transaction status"
+          - ""
+        defaultDdlCollation:
+        primaryKeys:
+        - "TRANSACTION_ID"
+        clusteringKeys:
+        dataRetentionTimeInDays:
+        comment: "Source transactions table for incremental load demo"
+    Insert Initial Source Data:
+      type: "sql-executor"
+      transitions:
+        success:
+        - "Create Target Table"
+      parameters:
+        componentName: "Insert Initial Source Data"
+        scriptLocation: "Component"
+        declareSqlVariables:
+        variablesToInclude:
+        fileName:
+        sqlScript: |
+          INSERT INTO SOURCE_TRANSACTIONS (TRANSACTION_ID, CUSTOMER_ID, AMOUNT, TRANSACTION_DATE, STATUS)
+          VALUES
+            (1, 101, 150.00, '2024-01-01 10:00:00', 'Completed'),
+            (2, 102, 250.50, '2024-01-01 11:30:00', 'Completed'),
+            (3, 103, 75.25, '2024-01-01 14:15:00', 'Completed'),
+            (4, 104, 500.00, '2024-01-01 16:45:00', 'Completed'),
+            (5, 105, 125.75, '2024-01-01 18:20:00', 'Completed'),
+            (6, 101, 300.00, '2024-01-02 09:10:00', 'Completed'),
+            (7, 106, 450.25, '2024-01-02 12:00:00', 'Completed'),
+            (8, 102, 175.50, '2024-01-02 15:30:00', 'Completed')
+    Create Target Table:
+      type: "create-table-v2"
+      transitions:
+        success:
+        - "Create HWM Control Table"
+      parameters:
+        componentName: "Create Target Table"
+        createMethod: "Replace"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        table: "TARGET_TRANSACTIONS"
+        snowflakeTableType: "Permanent"
+        columns:
+        - - "TRANSACTION_ID"
+          - "NUMBER"
+          - "10"
+          - "0"
+          - ""
+          - "Yes"
+          - "Yes"
+          - "Unique transaction ID"
+          - ""
+        - - "CUSTOMER_ID"
+          - "NUMBER"
+          - "10"
+          - "0"
+          - ""
+          - "Yes"
+          - "No"
+          - "Customer identifier"
+          - ""
+        - - "AMOUNT"
+          - "NUMBER"
+          - "12"
+          - "2"
+          - ""
+          - "Yes"
+          - "No"
+          - "Transaction amount"
+          - ""
+        - - "TRANSACTION_DATE"
+          - "TIMESTAMP_NTZ"
+          - ""
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - "Transaction timestamp"
+          - ""
+        - - "STATUS"
+          - "VARCHAR"
+          - "20"
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - "Transaction status"
+          - ""
+        - - "LOAD_TIMESTAMP"
+          - "TIMESTAMP_NTZ"
+          - ""
+          - ""
+          - "CURRENT_TIMESTAMP()"
+          - "Yes"
+          - "No"
+          - "When record was loaded"
+          - ""
+        defaultDdlCollation:
+        primaryKeys:
+        - "TRANSACTION_ID"
+        clusteringKeys:
+        dataRetentionTimeInDays:
+        comment: "Target table for incremental loads"
+    Create HWM Control Table:
+      type: "create-table-v2"
+      transitions:
+        success:
+        - "Initialize HWM"
+      parameters:
+        componentName: "Create HWM Control Table"
+        createMethod: "Replace"
+        database: "[Environment Default]"
+        schema: "[Environment Default]"
+        table: "HWM_CONTROL"
+        snowflakeTableType: "Permanent"
+        columns:
+        - - "TABLE_NAME"
+          - "VARCHAR"
+          - "100"
+          - ""
+          - ""
+          - "Yes"
+          - "Yes"
+          - "Name of table being tracked"
+          - ""
+        - - "HWM_COLUMN"
+          - "VARCHAR"
+          - "100"
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - "Column used for high-water mark"
+          - ""
+        - - "HWM_VALUE"
+          - "VARCHAR"
+          - "500"
+          - ""
+          - ""
+          - "Yes"
+          - "No"
+          - "Current high-water mark value"
+          - ""
+        - - "LAST_UPDATE"
+          - "TIMESTAMP_NTZ"
+          - ""
+          - ""
+          - "CURRENT_TIMESTAMP()"
+          - "Yes"
+          - "No"
+          - "Last time HWM was updated"
+          - ""
+        defaultDdlCollation:
+        primaryKeys:
+        - "TABLE_NAME"
+        clusteringKeys:
+        dataRetentionTimeInDays:
+        comment: "High-water mark control table"
+    Initialize HWM:
+      type: "sql-executor"
+      parameters:
+        componentName: "Initialize HWM"
+        scriptLocation: "Component"
+        declareSqlVariables:
+        variablesToInclude:
+        fileName:
+        sqlScript: |
+          INSERT INTO HWM_CONTROL (TABLE_NAME, HWM_COLUMN, HWM_VALUE)
+          VALUES ('SOURCE_TRANSACTIONS', 'TRANSACTION_DATE', '1900-01-01 00:00:00')
+design:
+  components:
+    Start:
+      position:
+        x: 0
+        "y": 0
+      tempMetlId: 1
+    Create Target Table:
+      position:
+        x: 480
+        "y": 0
+      tempMetlId: 4
+    Create HWM Control Table:
+      position:
+        x: 640
+        "y": 0
+      tempMetlId: 5
+    Create Source Transactions Table:
+      position:
+        x: 160
+        "y": 0
+      tempMetlId: 2
+    Insert Initial Source Data:
+      position:
+        x: 320
+        "y": 0
+      tempMetlId: 3
+    Initialize HWM:
+      position:
+        x: 800
+        "y": 0
+      tempMetlId: 6
